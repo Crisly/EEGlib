@@ -53,11 +53,13 @@ def esp(tim,array):
 	tmax = np.max(tim)
 	figure3 = plt.figure(3,figsize=[7,4])
 	ax1 = plt.subplot(111,autoscale_on=False, xlim=[tmin,tmax], ylim=[-4,4])
-	plt.plot(tim,array.transpose(),color='grey',lw=1)
-	plt.plot(tim,gfp,color='black',lw=3)
-	plt.plot(tim,array[0,:],color='red',lw=3)
+	plt.plot(tim,array.transpose(),color='grey',lw=1,label='all channels')
+	plt.plot(tim,gfp,color='black',lw=3,label='GFP')
+	plt.plot(tim,array[0,:],color='red',lw=3, label='Cz channel')
 	ax1.set_xlabel('time (ms)')
 	ax1.set_ylabel(r'Amplitude ($\mu$V)')
+	plt.legend(loc='best')
+		
 
 def eeg_bootptp(bootsample,tim,window):
 	""" Determine peak-to-peak values after bootstrapping EEG data
