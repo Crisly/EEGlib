@@ -51,15 +51,15 @@ def esp(tim,array):
 	gfp = eeg_rms(array)
 	tmin = np.min(tim)
 	tmax = np.max(tim)
-	figure3 = plt.figure(3,figsize=[7,4])
+	figure3 = plt.figure(3,figsize=[7,5])
 	ax1 = plt.subplot(111,autoscale_on=False, xlim=[tmin,tmax], ylim=[-4,4])
-	plt.plot(tim,array.transpose(),color='grey',lw=1,label='all channels')
+	plt.plot(tim,array.transpose(),color='grey',lw=1)
+	plt.plot(tim,array[0,:],color='grey',lw=1,label='all channels')
 	plt.plot(tim,gfp,color='black',lw=3,label='GFP')
 	plt.plot(tim,array[0,:],color='red',lw=3, label='Cz channel')
 	ax1.set_xlabel('time (ms)')
 	ax1.set_ylabel(r'Amplitude ($\mu$V)')
-	plt.legend(loc='best')
-		
+	ax1.legend(loc=1)			
 
 def eeg_bootptp(bootsample,tim,window):
 	""" Determine peak-to-peak values after bootstrapping EEG data
@@ -202,6 +202,7 @@ def eeg_derivative(array):
 	else:
 		print "Not yet implemented"
 		derivative = []
+	derivative = np.array(derivative)
 	return derivative
 
 def eeg_fdr(p_array,q,plot='false'):
@@ -339,7 +340,7 @@ def eeg_smooth(array,window,window_len):
 		
 	return array_smooth
 
-def eeg_peaks(array,tim,window,plot='false'):
+def eeg_peaks(array,tim,onset,plot='false'):
 	"""  Determine the P1, N1 and P2 peak values of the evoked responses in a time-window
 		
 	Args:
@@ -356,89 +357,87 @@ def eeg_peaks(array,tim,window,plot='false'):
 		p2 : P2 peak value
 		tp2 : latency of the P2 peak in ms 
 		(optional) : plot of  the waveform and the P1,N1,P2 values 
-		
-	"""	
-	r0,r1,r2 = window[0],window[1],window[2]
-	idx_1 = np.squeeze(np.logical_and(tim>=r0,tim<=r1))
-	idx_2 = np.squeeze(np.logical_and(tim>=r1,tim<=r2))        
-	p1 = np.max(array[idx_1])
-	n1 = np.min(array[idx_1])
-	p2 = np.max(array[idx_2])
-	tp1 = tim[idx_1][array[idx_1].argmax()]
-	tn1 = tim[idx_1][array[idx_1].argmin()]
-	tp2 = tim[idx_2][array[idx_2].argmax()]
-	if plot == 'true':          
-		lineax = dict(linewidth=1, color='black', linestyle=':')        
-		fig = plt.figure(19,figsize=[7,5])
-		ax = fig.add_subplot(111, autoscale_on=False, xlim=[window[0]-200,window[-1]+200], ylim=[1.3*np.min(array[idx_1]),1.3*np.max(array[idx_2])])
-		plt.plot(tim,array,'k-',lw=3)
-		plt.plot(tp1,p1,'ro')
-		plt.plot(tn1,n1,'go')
-		plt.plot(tp2,p2,'bo')
-		ax.axvline(float(r0),**lineax)
-		#ax.axvline(float(r1),**lineax)	
-		ax.axvline(float(r2),**lineax)
-		ax.axhline(**lineax)
-		plt.text(tp1-220,1.2*p1,'P1 = %.2f nAm at %.0f ms'  %(p1,tp1))
-		plt.text(tn1-40,1.2*n1,'N1 = %.2f nAm at %.0f ms'  %(n1,tn1))
-		plt.text(tn1+40,1.1*p2,'P2 = %.2f nAm at %.0f ms'  %(p2,tp2))
-		plt.xlabel('time (ms)',fontsize = 13)
-		plt.ylabel('Amplitude',fontsize = 13)
 
-
-	return [p1,n1,p2,tp1,tn1,tp2]
-	
-def eeg_peaks_gfp(array,tim,onset,plot='false'):
-	"""  Determine the P1, N1 and P2 peak values of the global field power of the evoked responses in a time-window
-		
-	Args:
-		array :  contains single channel or source-waveform data. EEG data can be either a single channel (ntpts) or multiple channels (ntpts x nchan)
-		tim : timing information, array of timepoints in the eeg channel
-		window : time-window in which to look for the peaks (e.g., [0,125,250] )
-		
-		
-	Returns:
-		p1 : P1 peak value
-		tp1 : latency of the P1 peak in ms 
-		n1 : N11 peak value
-		tn1 : latency of the N1 peak in ms 
-		p2 : P2 peak value
-		tp2 : latency of the P2 peak in ms 
-		(optional) : plot of  the waveform and the P1,N1,P2 values 
-		
-	"""	
-	r0 = onset + 25
-	r1 = onset + 75
-	r2 = onset + 150
-	r3 = onset + 300	
-	idx_p1 = np.squeeze(np.logical_and(tim>=r0,tim<=r1))
-	idx_n1 = np.squeeze(np.logical_and(tim>=r1,tim<=r2)) 
-	idx_p2 = np.squeeze(np.logical_and(tim>=r2,tim<=r3))  
+	"""
+	p1_i,n1_i,p2_i = onset+56,onset+104,onset+176
+	win_p1,win_n1,win_p2 = 15,20,40
+	# determine P1,N1 and P2 values on the basis of the maximum in GFP in a window around the expected values
+	idx_p1 = np.logical_and(tim>p1_i-win_p1, tim<p1_i+win_p1)
+	idx_n1 = np.logical_and(tim>n1_i-win_n1, tim<n1_i+win_n1)
+	idx_p2 = np.logical_and(tim>p2_i-win_p2, tim<p2_i+win_p2)
 	p1 = np.max(array[idx_p1])
-	n1 = np.max(array[idx_n1])
-	p2 = np.max(array[idx_p2])
 	tp1 = tim[idx_p1][array[idx_p1].argmax()]
-	tn1 = tim[idx_n1][array[idx_n1].argmax()]
+	n1 = np.min(array[idx_n1])
+	tn1 = tim[idx_n1][array[idx_n1].argmin()]
+	p2 = np.max(array[idx_p2])
 	tp2 = tim[idx_p2][array[idx_p2].argmax()]
-	if plot == 'true':          
-		lineax = dict(linewidth=1, color='black', linestyle=':')        
+
+	lineax = dict(linewidth=1, color='black', linestyle='--')
+	linep1 = dict(linewidth=1, color='red', linestyle='--')
+	linen1 = dict(linewidth=1, color='green', linestyle='--')
+	linep2 = dict(linewidth=1, color='blue', linestyle='--')
+
+	if plot == 'true':		
 		fig = plt.figure(19,figsize=[7,5])
-		ax = fig.add_subplot(111, autoscale_on=False, xlim=[r0-100,r3+150], ylim=[0,1.25*np.max([p1,n1,p2])])
+		ax = fig.add_subplot(111, autoscale_on=False, xlim=[onset-100,tp2+200], ylim=[1.25*np.min([p1,n1,p2]),1.25*np.max([p1,n1,p2])])
 		plt.plot(tim,array,'k-',lw=3)
 		plt.plot(tp1,p1,'ro')
 		plt.plot(tn1,n1,'go')
 		plt.plot(tp2,p2,'bo')
-		ax.axvline(float(r0),**lineax)
-		ax.axvline(float(r1),**lineax)	
-		ax.axvline(float(r2),**lineax)
-		ax.axvline(float(r3),**lineax)
+		ax.axvline(p1_i-win_p1,**linep1)
+		ax.axvline(p1_i+win_p1,**linep1)
+		ax.axvline(n1_i-win_n1,**linen1)
+		ax.axvline(n1_i+win_n1,**linen1)
+		ax.axvline(p2_i-win_p2,**linep2)
+		ax.axvline(p2_i+win_p2,**linep2)
 		ax.axhline(**lineax)
-		plt.text(tp1-220,1.2*p1,'P1 = %.2f nAm at %.0f ms'  %(p1,tp1))
-		plt.text(tn1-40,1.2*n1,'N1 = %.2f nAm at %.0f ms'  %(n1,tn1))
-		plt.text(tn1+40,1.1*p2,'P2 = %.2f nAm at %.0f ms'  %(p2,tp2))
+		plt.text(tp1-120,1.25*p1,'P1 = %.2f muV at %.0f ms'  %(p1,tp1),fontsize=10)
+		plt.text(tn1-40,1.1*n1,'N1 = %.2f muV at %.0f ms'  %(n1,tn1),fontsize=10)
+		plt.text(tn1+40,1.1*p2,'P2 = %.2f muV at %.0f ms'  %(p2,tp2),fontsize=10)
 		plt.xlabel('time (ms)',fontsize = 13)
 		plt.ylabel('Amplitude',fontsize = 13)
 	return [p1,n1,p2,tp1,tn1,tp2]
+
+def eeg_peaks_gfp(array,tim,onset,plot='false'):
+    gfp = eeg_rms(array)  
+    p1_i,n1_i,p2_i = onset+56,onset+104,onset+176
+    win_p1,win_n1,win_p2 = 15,20,40
+    # determine P1,N1 and P2 values on the basis of the maximum in GFP in a window around the expected values
+    idx_p1 = np.logical_and(tim>p1_i-win_p1, tim<p1_i+win_p1)
+    idx_n1 = np.logical_and(tim>n1_i-win_n1, tim<n1_i+win_n1)
+    idx_p2 = np.logical_and(tim>p2_i-win_p2, tim<p2_i+win_p2)
+    p1 = np.max(gfp[idx_p1])
+    tp1 = tim[idx_p1][gfp[idx_p1].argmax()]
+    n1 = np.max(gfp[idx_n1])
+    tn1 = tim[idx_n1][gfp[idx_n1].argmax()]
+    p2 = np.max(gfp[idx_p2])
+    tp2 = tim[idx_p2][gfp[idx_p2].argmax()]
+    lineax = dict(linewidth=1, color='black', linestyle='--')
+    linep1 = dict(linewidth=1, color='red', linestyle='--')
+    linen1 = dict(linewidth=1, color='green', linestyle='--')
+    linep2 = dict(linewidth=1, color='blue', linestyle='--')
+    
+    if plot == 'true':		
+		fig = plt.figure(20,figsize=[7,5])
+		ax = fig.add_subplot(111, autoscale_on=False, xlim=[onset-100,tp2+250], ylim=[0,1.25*np.max([p1,n1,p2])])
+		plt.plot(tim,gfp,'k-',lw=3)
+		plt.plot(tp1,p1,'ro')
+		plt.plot(tn1,n1,'go')
+		plt.plot(tp2,p2,'bo')
+		ax.axvline(p1_i-win_p1,**linep1)
+		ax.axvline(p1_i+win_p1,**linep1)
+		ax.axvline(n1_i-win_n1,**linen1)
+		ax.axvline(n1_i+win_n1,**linen1)
+		ax.axvline(p2_i-win_p2,**linep2)
+		ax.axvline(p2_i+win_p2,**linep2)
+		ax.axhline(**lineax)
+		plt.text(tp1-220,1.2*p1,'P1 = %.2f muV at %.0f ms'  %(p1,tp1))
+		plt.text(tn1-40,1.2*n1,'N1 = %.2f muV at %.0f ms'  %(n1,tn1))
+		plt.text(tn1+40,1.1*p2,'P2 = %.2f muV at %.0f ms'  %(p2,tp2))
+		plt.xlabel('time (ms)',fontsize = 13)
+		plt.ylabel('Amplitude',fontsize = 13)
+    return [p1,n1,p2,tp1,tn1,tp2]
+
 	
 def eeg_det_ptp(array,win_p1,win_n1,win_p2,tim):
 	"""  Single-subject Peak-to-peak measurement based on time-windows around the P1 (win_p1),N1 (win_n1) and P2 (win_p2) deflection
@@ -898,6 +897,179 @@ def stats_holmBonf(p,plot='false'):
 		p_holm = nan
 		
 	return h,corrected_p,p_holm
+	
+def eeg_topoplot(topography, sensorlocations, plotsensors=False,
+                       resolution=151, contour=False, masked=True, plothead=True,
+                       method='Rbf', plothead_kwargs=None, **kwargs):
+    """Plot distribution to a head surface, derived from some sensor locations. 
+ 		The sensor locations (polar coordinates; theta, radius) are plotted on top of a scalp
+ 		Largely based on the plotHeadTopography and plotHeadOutline functions as part of the PyMVPA package (http://www.pymvpa.org)
+ 		source: https://github.com/PyMVPA/PyMVPA/blob/master/mvpa2/misc/plot/topo.py
+ 		
+	Args:
+		topography : array; a vector containing the values corresponding to each of the sensors. 
+        sensorlocations : (nsensors x 2) array; first value is theta (in degree) and the second is the radius 
+			The order of the sensors has to match those of the `topography` vector. 
+		plotsensors: bool; If True, the sensor will be plotted on their projected coordinates. No sensor are shown otherwise. 
+ 		plothead: bool;  If True, a head outline is plotted. 
+ 		plothead_kwargs: dict; Additional keyword arguments passed to `plotHeadOutline()`. 
+		resolution: int; Number of surface samples along both x and y-axis. 
+ 		contour: bool; If True, contour lines are shown on top of the map
+ 		masked: bool; If True, all surface sample extending to head outline will be masked.
+ 		method: 'Rbf' (default) or 'Grid'; Rbf allows for extrapolation outside the data points (scipy.interpolate.Rbf); Grid does not allow this
+		**kwargs: All additional arguments will be passed to the `pylab.imshow()` instance showing the topography. 
+
+	Returns: 
+		(maps,maps_contourlines,head,sensors) 
+		The corresponding matplotlib objects are returned if plotted, ie. if plothead is set to `False`, `head` will be `None`. 
+		maps : The colormap that makes the actual plot, a matplotlib.image.AxesImage instance. 
+ 		maps_contourlines : the contourlines, a matplotlib.contour.QuadContourSet instance
+ 		head : the outline of the head as returned by `eeg_plotHeadOutline()`, a matplotlib.lines.Line2d instance
+ 		sensors : The dots marking the electrodes, a matplotlib.lines.Line2d instance. """
+ 
+    from scipy.interpolate import Rbf
+    if plothead_kwargs is None:
+        plothead_kwargs = {}
+	
+    th = sensorlocations[:,0]
+    rd = sensorlocations[:,1]
+    # theta values assumed to be in degrees; if already in radians, comment out next line
+    th = pi*th/180.0
+    y = rd * np.cos(th)
+    x = rd * np.sin(th)
+    r = np.max(rd)
+	
+    # size of each square
+    ssh = float(r) / resolution         # half-size
+    ss = ssh * 2.0                      # full-size
+    cx,cy = 0,0
+
+    # Generate a grid and interpolate using either the griddata module (w/o extrapolation) or scipy.interpolate.Rbf (with extrapolation outside data-points)
+    xi = np.arange(cx - r, cx + r, ss) + ssh
+    yi = np.arange(cy - r, cy + r, ss) + ssh
+    xi, yi = meshgrid(xi, yi)
+    if method == 'grid':
+        topo = griddata(x,y,topography,xi,yi)    
+    else:
+        rbf = Rbf(x, y, topography, epsilon=0.05)
+        topo = rbf(xi, yi)
+    
+    # mask values outside the head
+    if masked:
+        notinhead = np.greater_equal((xi - cx) ** 2 + (yi - cy) ** 2,(1.0 * r) ** 2)
+        topo = np.ma.masked_where(notinhead, topo)
+    
+	# show topography + contourlines or only the topography
+    if contour:
+        maps = plt.imshow(topo, origin="lower", extent=(-r, r, -r, r),cmap=plt.cm.jet, **kwargs)
+        levels = 5
+        maps_contourlines = plt.contour(xi,yi,topo,levels,linewidths=2,colors='grey',**kwargs)
+        # We don't need dashed contour lines to indicate negative
+        # regions, so let's turn them off.
+        for c in maps_contourlines.collections:
+            c.set_linestyle('solid')            
+        
+        #for filled & discrete contours instead of the 256-color map, use this:
+        #maps_contourlines = plt.contourf(xi,yi,topo,levels,origin="lower",cmap=plt.cm.jet, extent=(-r, r, -r, r), **kwargs)
+        
+    else:
+        maps = plt.imshow(topo, origin="lower", extent=(-r, r, -r, r), **kwargs)
+        maps_contourlines = None   
+
+    if plothead:
+        #make head slightly smaller than r so that e.g. fp1 and fp2 are on the outline of the head 
+        head = eeg_plot_head_outline(scale=0.75*r, shift=(cx/2.0, cy/2.0), **plothead_kwargs)
+    else:
+        head = None
+
+    if plotsensors:
+        # plot projected sensor locations
+        sensors = plt.plot(x,y,c='black',marker='o',lw=0,ms=6,mew=1,mec='black')
+    else:
+        sensors = None
+        
+    plt.axis('off')
+    plt.axis('equal')
+    return maps,maps_contourlines,head,sensors
+    
+def eeg_plot_head_outline(scale=1, shift=(0, 0), color='k', linewidth='5', **kwargs):
+    """Plots a simple outline of a head viewed from the top.
+    Function borrowed from the PyMVPA package (http://www.pymvpa.org)
+    see e.g., https://github.com/PyMVPA/PyMVPA/blob/master/mvpa2/misc/plot/topo.py
+
+    The plot contains schematic representations of the nose and ears. The
+    size of the head is basically a unit circle for nose and ears attached
+    to it.
+
+    Parameters
+    ----------
+    scale : float
+      Factor to scale the size of the head.
+    shift : 2-tuple of floats
+      Shift the center of the head circle by these values.
+    color : matplotlib color spec
+      The color the outline should be plotted in.
+    linewidth : int
+      Linewidth of the head outline.
+    **kwargs
+      All additional arguments are passed to `pylab.plot()`.
+
+    Returns
+    -------
+    Matplotlib lines2D object
+      can be used to tweak the look of the head outline.
+    """
+
+    rmax = 0.5
+    # factor used all the time
+    fac = 2 * np.pi * 0.01
+
+    # Koordinates for the ears
+    EarX1 =  -1 * np.array(
+            [.497, .510, .518, .5299,
+            .5419, .54, .547, .532, .510,
+            rmax * np.cos(fac * (54 + 42))])
+    EarY1 = np.array(
+            [.0655, .0775, .0783, .0746, .0555,
+            -.0055, -.0932, -.1313, -.1384,
+            rmax * np.sin(fac * (54 + 42))])
+    EarX2 = np.array(
+            [rmax * np.cos(fac * (54 + 42)),
+            .510, .532, .547, .54, .5419,
+            .5299, .518, .510, .497] )
+    EarY2 = np.array(
+            [rmax * np.sin(fac * (54 + 42)),
+            -.1384, -.1313, -.0932, -.0055,
+            .0555, .0746, .0783, .0775, .0655] )
+
+    # Coordinates for the Head
+    HeadX1 = np.fromfunction(
+            lambda x: rmax * np.cos(fac * (x + 2)), (21,))
+    HeadY1 = np.fromfunction(
+            lambda y: rmax * np.sin(fac * (y + 2)), (21,))
+    HeadX2 = np.fromfunction(
+            lambda x: rmax * np.cos(fac * (x + 28)), (21,))
+    HeadY2 = np.fromfunction(
+            lambda y: rmax * np.sin(fac * (y + 28)), (21,))
+    HeadX3 = np.fromfunction(
+            lambda x: rmax * np.cos(fac * (x + 54)), (43,))
+    HeadY3 = np.fromfunction(
+            lambda y: rmax * np.sin(fac * (y + 54)), (43,))
+
+    # Coordinates for the Nose
+    NoseX = np.array([.18 * rmax, 0, -.18 * rmax])
+    NoseY = np.array([rmax - 0.004, rmax * 1.15, rmax - 0.004])
+
+    # Combine to one
+    X = np.concatenate((EarX2, HeadX1, NoseX, HeadX2, EarX1, HeadX3))
+    Y = np.concatenate((EarY2, HeadY1, NoseY, HeadY2, EarY1, HeadY3))
+
+    X *= 2 * scale
+    Y *= 2 * scale
+    X += shift[0]
+    Y += shift[1]
+
+    return pl.plot(X, Y, color=color, linewidth=linewidth)
 	
 #various functions (maybe obsolete)
 #======================
