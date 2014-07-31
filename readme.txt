@@ -19,6 +19,7 @@ This library contains a number of usefull EEG data analysis functions, such as
 	
 - EEG data visualisation
 	- eeg_butterfly
+	- eeg_topoplot
 	
 and a few generic maths/stats functions
 

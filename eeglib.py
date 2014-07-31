@@ -763,7 +763,7 @@ def eeg_readelp(file):
 	
 	f.close()
 	# theta and phi are in degrees -> convert to radians
-	x,y,z = eeg_sph2cart(theta*pi/180,phi*pi/180,r)
+	x,y,z = eeg_sph2cart(theta*np.pi/180,phi*np.pi/180,r)
 	return chan,x,y,z,theta,phi
 	
 def eeg_sph2cart(az,el,r):
@@ -934,7 +934,7 @@ def eeg_topoplot(topography, sensorlocations, plotsensors=False,
     th = sensorlocations[:,0]
     rd = sensorlocations[:,1]
     # theta values assumed to be in degrees; if already in radians, comment out next line
-    th = pi*th/180.0
+    th = np.pi * th/180.0
     y = rd * np.cos(th)
     x = rd * np.sin(th)
     r = np.max(rd)
@@ -947,9 +947,9 @@ def eeg_topoplot(topography, sensorlocations, plotsensors=False,
     # Generate a grid and interpolate using either the griddata module (w/o extrapolation) or scipy.interpolate.Rbf (with extrapolation outside data-points)
     xi = np.arange(cx - r, cx + r, ss) + ssh
     yi = np.arange(cy - r, cy + r, ss) + ssh
-    xi, yi = meshgrid(xi, yi)
+    xi, yi = np.meshgrid(xi, yi)
     if method == 'grid':
-        topo = griddata(x,y,topography,xi,yi)    
+        topo = plt.griddata(x,y,topography,xi,yi)    
     else:
         rbf = Rbf(x, y, topography, epsilon=0.05)
         topo = rbf(xi, yi)
@@ -1069,16 +1069,16 @@ def eeg_plot_head_outline(scale=1, shift=(0, 0), color='k', linewidth='5', **kwa
     X += shift[0]
     Y += shift[1]
 
-    return pl.plot(X, Y, color=color, linewidth=linewidth)
+    return plt.plot(X, Y, color=color, linewidth=linewidth)
 	
 #various functions (maybe obsolete)
 #======================
 
-def my_errorbar(x,y,yerr,w):
+def my_errorbar(x,y,yerr,w,lw=3):
 	for i in range(len(x)):
-		plt.plot([x[i],x[i]],[y[i]-yerr[i],y[i]+yerr[i]],lw=1,c='black',ls='-')
-		plt.plot([x[i]-w/2,x[i]+w/2],[y[i]-yerr[i], y[i]-yerr[i]],lw=1,c='black',ls='-')
-		plt.plot([x[i]-w/2,x[i]+w/2],[y[i]+yerr[i], y[i]+yerr[i]],lw=1,c='black',ls='-')
+		plt.plot([x[i],x[i]],[y[i]-yerr[i],y[i]+yerr[i]],lw=lw,c='black',ls='-')
+		plt.plot([x[i]-w/2,x[i]+w/2],[y[i]-yerr[i], y[i]-yerr[i]],lw=lw,c='black',ls='-')
+		plt.plot([x[i]-w/2,x[i]+w/2],[y[i]+yerr[i], y[i]+yerr[i]],lw=lw,c='black',ls='-')
 	
 def roex_fit(p,g):
 	return (1+p*g)*np.exp(-p*g)
